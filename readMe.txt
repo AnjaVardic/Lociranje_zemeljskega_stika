@@ -6,5 +6,3 @@
     3.1 Interactive network plot
     3.2 Add the metering data for power to the points
 
-Hello World
-uu
