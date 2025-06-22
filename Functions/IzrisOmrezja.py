@@ -199,124 +199,136 @@ def run_interactive_map(folder_path):
         except Exception as e:
             print(f"Skipping line {i} due to error: {e}")
 
-    # #----------------------- Loads 
-    # points_gdf["NODE_clean"] = points_gdf["OBJ_ID"].astype(str).str.strip()
+    # ----------------------- Create Loads -----------------------
 
-    # # Create a mapping of mp_id to created load index for later update
-    # mpid_to_load_idx = {}
+    # Clean up node identifiers in points_gdf
+    points_gdf["NODE_clean"] = points_gdf["NODE1"].astype(str).str.strip()
+    points_gdf["ST_MM_clean"] = points_gdf["ST_MM"].astype(str).str.strip()
 
-    # for i, row in points_gdf.iterrows():
-    #     mp_id = str(row["ST_MM"]).strip()
-    #     node_id = row["NODE_clean"]
-    #     if node_id not in node_id_map:
-    #         print(f"Skipping MP {mp_id}: node {node_id} not found")
-    #         continue
-    #     bus = node_id_map[node_id]
-        
-    #     # Create load with zero or dummy initial values
-    #     load_idx = pp.create_load(net, bus=bus, p_mw=0.0, q_mvar=0.0, name=f"Load {mp_id}")
-        
-    #     # Store mapping to update later
-    #     mpid_to_load_idx[mp_id] = load_idx
+    # Initialize dictionary to track mp_id -> load index
+    mpid_to_load_idx = {}
 
-    # # Later, after you have load_data dictionary (mp_id -> {'p_mw':..., 'q_mvar':...})
+    # Loop through metering points and create loads
+    for i, row in points_gdf.iterrows():
+        # mp_id = row["ST_MM_clean"]
+        # node_id = row["NODE_clean"]
+        mp_id = str(row.get("ST_MM", "")).strip()
+        node_id = str(row.get("NODE_clean", "")).strip()
 
-    # for mp_id, load_params in load_data.items():
-    #     load_idx = mpid_to_load_idx.get(str(mp_id))
-    #     if load_idx is None:
-    #         print(f"No load created for MP ID {mp_id}, skipping update.")
-    #         continue
-    #     # Update the load in net with real measured values
-    #     net.load.at[load_idx, "p_mw"] = load_params.get("p_mw", 0.0)
-    #     net.load.at[load_idx, "q_mvar"] = load_params.get("q_mvar", 0.0)
+        # Skip if node is not mapped to a bus
+        if node_id not in node_id_map:
+            print(f"⚠️ Skipping metering point {mp_id}: node '{node_id}' not found in node_id_map.")
+            continue
+
+        bus = node_id_map[node_id]
+
+        if bus not in net.bus.index:
+            print(f"❌ Bus index {bus} for node {node_id} is not in net.bus!")
+            continue
+
+        try:
+            # Create load with initial zero values
+            load_idx = pp.create_load(
+                net,
+                bus=bus,
+                p_mw=0.0,
+                q_mvar=0.0,
+                name=f"Load {mp_id}"
+            )
+            mpid_to_load_idx[mp_id] = load_idx
+            #print(f"✅ Load created for MP {mp_id} on bus {bus}")
+        except Exception as e:
+            print(f"❌ Failed to create load for MP {mp_id} on bus {bus}: {e}")
+
 
     #-------------------- External Grid (nearest node to each RTP)
-    # # Initialize the RTP bus map
-    # rtp_bus_map = {}
+    # Initialize the RTP bus map
+    rtp_bus_map = {}
 
-    # # Normalize RTP column names
-    # # So the column name is likely "OBJECTID", but it might be uppercase, have extra spaces, or be renamed during import.
-    # # Step 1: Uppercase all columns (including geometry)
-    # RTP_gdf.columns = RTP_gdf.columns.str.strip().str.upper()
+    # Normalize RTP column names
+    # So the column name is likely "OBJECTID", but it might be uppercase, have extra spaces, or be renamed during import.
+    # Step 1: Uppercase all columns (including geometry)
+    RTP_gdf.columns = RTP_gdf.columns.str.strip().str.upper()
 
-    # # Step 2: Set geometry explicitly to the uppercased geometry column
-    # RTP_gdf = RTP_gdf.set_geometry("GEOMETRY")
+    # Step 2: Set geometry explicitly to the uppercased geometry column
+    RTP_gdf = RTP_gdf.set_geometry("GEOMETRY")
 
-    # # Step 3: Use row["GEOMETRY"] to access geometry in your loop
-    # for i, row in RTP_gdf.iterrows():
-    #     rtp_point = row["GEOMETRY"]  # Access geometry via column name since attribute .geometry won't work
-    #     nearest_idx = nodes_gdf.geometry.distance(rtp_point).idxmin()
-    #     node_id = nodes_gdf.loc[nearest_idx, "CIMID_clean"]
+    # Step 3: Use row["GEOMETRY"] to access geometry in your loop
+    for i, row in RTP_gdf.iterrows():
+        rtp_point = row["GEOMETRY"]  # Access geometry via column name since attribute .geometry won't work
+        nearest_idx = nodes_gdf.geometry.distance(rtp_point).idxmin()
+        node_id = nodes_gdf.loc[nearest_idx, "CIMID_clean"]
 
-    #     if node_id not in node_id_map:
-    #         print(f"RTP {i}: nearest node {node_id} not mapped")
-    #         continue
+        if node_id not in node_id_map:
+            print(f"RTP {i}: nearest node {node_id} not mapped")
+            continue
 
-    #     bus = node_id_map[node_id]
-    #     pp.create_ext_grid(net, bus=bus, vm_pu=1.0, name=f"RTP {row['NAZIV']}")
+        bus = node_id_map[node_id]
+        pp.create_ext_grid(net, bus=bus, vm_pu=1.0, name=f"RTP {row['NAZIV']}")
 
-    #     rtp_id = str(row["OBJECTID"]).strip()
-    #     rtp_bus_map[rtp_id] = bus
-
-
-    # #---------------------------- Transformers TR
-    # TR_gdf["node1_clean"] = TR_gdf["node1"].astype(str).str.strip()
-
-    # for i, row in TR_gdf.iterrows():
-    #     node_id = row["node1_clean"]
-    #     if node_id not in node_id_map:
-    #         print(f"Skipping TR {i}: node {node_id} not found")
-    #         continue
-
-    #     lv_bus = node_id_map[node_id]
-
-    #     # Use RTP info to get the correct HV bus
-    #     rtp_id = str(row["OBJECTID"]).strip()
-    #     if rtp_id not in rtp_bus_map:
-    #         print(f"Skipping TR {i}: RTP ID {rtp_id} not found in RTP bus map")
-    #         continue
-
-    #     hv_bus = rtp_bus_map[rtp_id]
-
-    #     try:
-    #         # Convert strings to float values using comma as decimal
-    #         sn_mva = float(str(row["nazivna_mo"]).replace(",", ".")) / 1e6           # MVA
-    #         vn_hv_kv = float(str(row["u_prim"]).replace(",", ".")) / 1000            # kV
-    #         vn_lv_kv = float(str(row["u_sek"]).replace(",", ".")) / 1000             # kV
-    #         p_cu_kw = float(str(row["p_cu"]).replace(",", "."))                      # kW
-    #         p_fe_kw = float(str(row["p_fe"]).replace(",", "."))                      # kW
-    #         i0_percent = float(str(row["i_o"]).replace(",", "."))                    # %
-
-    #         # Calculate vkr_percent (resistive part of impedance)
-    #         vkr_percent = (p_cu_kw * 100) / (sn_mva * 1e3)
-
-    #         # Use a typical default or inferred short-circuit impedance
-    #         vk_percent = 6.0  # Can be adjusted per real data if available
-
-    #     except Exception as e:
-    #         print(f"Transformer {i} parse failed: {e}")
-    #         sn_mva, vn_hv_kv, vn_lv_kv = 20.0, 110.0, 21.0
-    #         vk_percent, vkr_percent = 6.0, 0.5
-    #         p_fe_kw, i0_percent = 1.0, 0.1
-
-    #     # Create transformer using actual or fallback values
-    #     pp.create_transformer_from_parameters(
-    #         net,
-    #         hv_bus=hv_bus,
-    #         lv_bus=lv_bus,
-    #         sn_mva=sn_mva,
-    #         vn_hv_kv=vn_hv_kv,
-    #         vn_lv_kv=vn_lv_kv,
-    #         vk_percent=vk_percent,
-    #         vkr_percent=vkr_percent,
-    #         pfe_kw=p_fe_kw,
-    #         i0_percent=i0_percent,
-    #         name=f"TR Trafo {i}"
-    #     )
+        rtp_id = str(row["OBJECTID"]).strip()
+        rtp_bus_map[rtp_id] = bus
 
 
+    #---------------------------- Transformers TR
+    # Normalize column names for safety
+    TR_gdf.columns = TR_gdf.columns.str.strip().str.lower()
 
-    return app, fig, points_gdf, net  # <-- return values instead of calling run()
+    TR_gdf["node1_clean"] = TR_gdf["node1"].astype(str).str.strip()
+
+    for i, row in TR_gdf.iterrows():
+        node_id = row["node1_clean"]
+        if node_id not in node_id_map:
+            print(f"Skipping TR {i}: node {node_id} not found")
+            continue
+
+        lv_bus = node_id_map[node_id]
+
+        # Use RTP info to get the correct HV bus
+        rtp_id = str(row["id_rtp"]).strip()
+        if rtp_id not in rtp_bus_map:
+            print(f"Skipping TR {i}: RTP ID {rtp_id} not found in RTP bus map")
+            continue
+
+        hv_bus = rtp_bus_map[rtp_id]
+
+        try:
+            # Convert strings to float values using comma as decimal
+            sn_mva = float(str(row["nazivna_mo"]).replace(",", ".")) / 1e6           # MVA
+            vn_hv_kv = float(str(row["u_prim"]).replace(",", ".")) / 1000            # kV
+            vn_lv_kv = float(str(row["u_sek"]).replace(",", ".")) / 1000             # kV
+            p_cu_kw = float(str(row["p_cu"]).replace(",", "."))                      # kW
+            p_fe_kw = float(str(row["p_fe"]).replace(",", "."))                      # kW
+            i0_percent = float(str(row["i_o"]).replace(",", "."))                    # %
+
+            # Calculate vkr_percent (resistive part of impedance)
+            vkr_percent = (p_cu_kw * 100) / (sn_mva * 1e3)
+
+            # Use a typical default or inferred short-circuit impedance
+            vk_percent = 6.0  # Can be adjusted per real data if available
+
+        except Exception as e:
+            print(f"Transformer {i} parse failed: {e}")
+            sn_mva, vn_hv_kv, vn_lv_kv = 20.0, 110.0, 21.0
+            vk_percent, vkr_percent = 6.0, 0.5
+            p_fe_kw, i0_percent = 1.0, 0.1
+
+        # Create transformer using actual or fallback values
+        pp.create_transformer_from_parameters(
+            net,
+            hv_bus=hv_bus,
+            lv_bus=lv_bus,
+            sn_mva=sn_mva,
+            vn_hv_kv=vn_hv_kv,
+            vn_lv_kv=vn_lv_kv,
+            vk_percent=vk_percent,
+            vkr_percent=vkr_percent,
+            pfe_kw=p_fe_kw,
+            i0_percent=i0_percent,
+            name=f"trafoPostaja {i}"
+        )
+
+    return app, fig, points_gdf, net, node_id_map  # <-- return values instead of calling run()
 
 
 #------------------------------------------------------------------

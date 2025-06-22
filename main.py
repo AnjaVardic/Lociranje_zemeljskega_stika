@@ -17,20 +17,19 @@ def main():
     #--------------------------------------------------------
     #--------Funkcija, ki izriše interaktive zemljevid-------
     #--------------------------------------------------------
-    app, fig, points_gdf, net = run_interactive_map(folder_path)
-    
-    print(net)
+    app, fig, points_gdf, net, node_id_map = run_interactive_map(folder_path)
 
     #-------------------------------------------------------------
     #--------Funkcija, ki veže podatke meritev na zemljevid-------
     #-------------------------------------------------------------
-    load_data, get_timeseries_figure = interactive_power_viewer(csv_path, points_gdf)
-    #load_data, get_timeseries_figure, net = interactive_power_viewer(csv_path, points_gdf, net, node_id_map)
+    load_data, get_timeseries_figure, net = interactive_power_viewer(csv_path, points_gdf, net, node_id_map)
 
+    #print(net.trafo.head())
+    print(net)
 
-    print("Prepared power load data:")
-    for mp_id, data in load_data.items():
-        print(mp_id, data)
+    #print("Prepared power load data:")
+    # for mp_id, data in load_data.items():
+    #     print(mp_id, data)
 
     #--------TO BE DONE--------------------------
     #--------add function dodaj_ozemljitev-------
@@ -44,11 +43,12 @@ def main():
     #--------TO BE DONE NOW--------------------------
     #--------add function pozeniSimulacijo-------
     #--------------------------------------------
-
+    # result = zazeni_simulacijo(click, load_data, net)
+    # print(result)
 
     #--------call function add_buttons_to_app
-    # Inject buttons into layout and setup interactivity
-    # Add UI buttons + callbacks, all args passed by name
+    #Inject buttons into layout and setup interactivity
+    #Add UI buttons + callbacks, all args passed by name
     add_buttons_to_app(
         app=app,
         fig=fig,
@@ -56,6 +56,7 @@ def main():
         get_timeseries_figure=get_timeseries_figure,
         func_add_grounding=dodaj_ozemljitev,
         func_add_pmu=dodaj_pmu,
+        net=net,
         func_run_simulation=zazeni_simulacijo
     )
 

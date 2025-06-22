@@ -8,7 +8,10 @@ def zazeni_simulacijo(click, load_data, net):
     if not click or "points" not in click:
         return "Napaka: Ni bilo izbrane linije."
 
-    line_id = click["points"][0]["text"]  # or "customdata", depending on your map
+    #line_id = click["points"][0]["text"]  # or "customdata", depending on your map
+    point = click["points"][0]
+    line_id = point.get("text") or point.get("customdata") or f"{point['x']},{point['y']}"
+
 
     try:
         line_idx = net.line[net.line.name == str(line_id)].index[0]
