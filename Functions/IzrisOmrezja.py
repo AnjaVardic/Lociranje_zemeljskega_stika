@@ -6,6 +6,9 @@ import os
 import pandapower as pp
 from shapely.geometry import Point
 import pandas as pd
+import re
+
+from Functions.dozemneKapacitivnosti import doloci_dozemne_kapacitivnosti
 
 clickable_el = []
 
@@ -32,21 +35,22 @@ def run_interactive_map(folder_path):
     RTP_gdf = gpd.read_file(os.path.join(folder_path, "RTP.shp"))
 
     # Print all columns of lines_gdf
-    #with pd.option_context('display.max_columns', None):
-        #print(lines_gdf.head())
+    with pd.option_context('display.max_columns', None):
+        print(lines_gdf.head())
         #print(TR_gdf.head())
         #print(RTP_gdf.head())
         #print(points_gdf.head())
 
-    print("lines :",lines_gdf.shape)
-    print("nodes :",nodes_gdf.shape)
-    print("points :",points_gdf.shape)
-    print("TR :",TR_gdf.shape)
-    print("RTP :",RTP_gdf.shape)
+    # print("lines :",lines_gdf.shape)
+    # print("nodes :",nodes_gdf.shape)
+    # print("points :",points_gdf.shape)
+    # print("TR :",TR_gdf.shape)
+    # print("RTP :",RTP_gdf.shape)
 
     fig = go.Figure()
-
-    # Draw lines
+    #---------------------------------------
+    #--------Draw lines---------------------
+    #---------------------------------------
     for _, row in lines_gdf.iterrows():
         if row.geometry.geom_type == "LineString":
             x_coords, y_coords = zip(*[(pt[0], pt[1]) for pt in row.geometry.coords])
@@ -58,7 +62,9 @@ def run_interactive_map(folder_path):
                 showlegend=False
             ))
 
-    # Draw nodes
+    #---------------------------------------
+    #--------Draw nodes---------------------
+    #---------------------------------------
     fig.add_trace(go.Scatter(
         x=nodes_gdf.geometry.apply(lambda geom: geom.x if geom.geom_type == 'Point' else None),
         y=nodes_gdf.geometry.apply(lambda geom: geom.y if geom.geom_type == 'Point' else None),
@@ -69,6 +75,9 @@ def run_interactive_map(folder_path):
     for i in nodes_gdf.index:
         add_click({"type": "node", "id": i})
 
+    #---------------------------------------
+    #--------Draw loads---------------------
+    #---------------------------------------
     # Split odjem/proizvodnja
     odjem_mask = points_gdf["TIP_MM"] == "Odjem elektricne energije"
     fig.add_trace(go.Scatter(
@@ -137,9 +146,10 @@ def run_interactive_map(folder_path):
         dcc.Graph(id="main-map", figure=fig),
     ])
 
-    # -------------------------------------------------
-    # Add pandapower network generation here
-    # -------------------------------------------------
+    #--------------------------------------------------
+    #---------Add pandapower network generation here---
+    #--------------------------------------------------
+    #-----veže podatke shp fila
 
     net = pp.create_empty_network()
     # It contains:
@@ -153,7 +163,9 @@ def run_interactive_map(folder_path):
     # Create buses for all nodes
     # Ensure consistent ID mapping between shapefiles
     # Clean up node IDs
-    #------------------------NODES
+    #--------------------------------------------------------------
+    #------------------------NODES---------------------------------
+    #--------------------------------------------------------------
     nodes_gdf["CIMID_clean"] = nodes_gdf["CIMID"].astype(str).str.strip()
     node_id_map = {}
 
@@ -161,10 +173,14 @@ def run_interactive_map(folder_path):
         node_id = row["CIMID_clean"]
         bus = pp.create_bus(net, vn_kv=20.0, name=f"Bus {node_id}")
         node_id_map[node_id] = bus
-
-    #--------------LINES Clean node identifiers
+    #--------------------------------------------------------------
+    #--------------LINES Clean node identifiers--------------------
+    #--------------------------------------------------------------
     lines_gdf["NODE1_clean"] = lines_gdf["NODE1"].astype(str).str.strip()
     lines_gdf["NODE2_clean"] = lines_gdf["NODE2"].astype(str).str.strip()
+
+    # Doloci dozemne kapacitivnosti
+    lines_gdf = doloci_dozemne_kapacitivnosti(lines_gdf)
 
     for i, row in lines_gdf.iterrows():
         from_id = row["NODE1_clean"]
@@ -199,7 +215,14 @@ def run_interactive_map(folder_path):
         except Exception as e:
             print(f"Skipping line {i} due to error: {e}")
 
-    # ----------------------- Create Loads -----------------------
+    #------------------------------------------------------------
+    #---DODAJ: doloci_dozemne_kapacitivnosti------------------
+    #------------------------------------------------------------
+
+
+    #------------------------------------------------------------
+    #----------------------- Create Loads -----------------------
+    #------------------------------------------------------------
 
     # Clean up node identifiers in points_gdf
     points_gdf["NODE_clean"] = points_gdf["NODE1"].astype(str).str.strip()
@@ -240,8 +263,9 @@ def run_interactive_map(folder_path):
         except Exception as e:
             print(f"❌ Failed to create load for MP {mp_id} on bus {bus}: {e}")
 
-
-    #-------------------- External Grid (nearest node to each RTP)
+    #------------------------------------------------------------------------
+    #-------------------- External Grid (nearest node to each RTP)-----------
+    #------------------------------------------------------------------------
     # Initialize the RTP bus map
     rtp_bus_map = {}
 
@@ -269,8 +293,9 @@ def run_interactive_map(folder_path):
         rtp_id = str(row["OBJECTID"]).strip()
         rtp_bus_map[rtp_id] = bus
 
-
-    #---------------------------- Transformers TR
+    #-----------------------------------------------------------------------------
+    #---------------------------- Transformers TR---------------------------------
+    #-----------------------------------------------------------------------------
     # Normalize column names for safety
     TR_gdf.columns = TR_gdf.columns.str.strip().str.lower()
 

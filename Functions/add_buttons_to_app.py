@@ -37,6 +37,10 @@ def add_buttons_to_app(app, fig, points_gdf, get_timeseries_figure, func_add_gro
     def store_click_info(clickData):
         return clickData
 
+    #--------------------------------------------------------------
+    #----IZBERI lokacijo okvare------------------------------------
+    #--------------------------------------------------------------
+
     # Toggle fault location mode on/off and update button color
     @app.callback(
         Output("fault-location-enabled", "data"),
@@ -88,6 +92,10 @@ def add_buttons_to_app(app, fig, points_gdf, get_timeseries_figure, func_add_gro
 
         return {"x": fault_x, "y": fault_y}, fig
 
+    #--------------------------------------------------------------
+    #----DODAJ ozemljitev IN PMU-----------------------------------
+    #--------------------------------------------------------------
+
     # Map updates for grounding and PMU buttons
     @app.callback(
         Output("map-graph", "figure", allow_duplicate=True),
@@ -111,6 +119,10 @@ def add_buttons_to_app(app, fig, points_gdf, get_timeseries_figure, func_add_gro
             return fig_updated
 
         raise dash.exceptions.PreventUpdate
+
+    #--------------------------------------------------------------
+    #----s KLIKOM zaženi simulacijo--------------------------------
+    #--------------------------------------------------------------
 
     # Run simulation on button click, only if fault location mode is ON and location selected
     @app.callback(
@@ -156,6 +168,10 @@ def add_buttons_to_app(app, fig, points_gdf, get_timeseries_figure, func_add_gro
 
         return result_str, False, sim_done_style
 
+    #--------------------------------------------------------------
+    #----PRIKAŽI rezultate simulacije------------------------------
+    #--------------------------------------------------------------
+
     # Show simulation results on button click, update button color too
     @app.callback(
         Output("simulation-output", "children"),
@@ -168,6 +184,10 @@ def add_buttons_to_app(app, fig, points_gdf, get_timeseries_figure, func_add_gro
         # Turn button green when results viewed
         style = {'backgroundColor': 'lightgreen'}
         return result or "Ni rezultatov za prikaz.", style
+
+    #--------------------------------------------------------------
+    #----PRIKAŽI MERITVE s klikom na točko-------------------------
+    #--------------------------------------------------------------
 
     # Toggle CHECK DATA mode button (independent, no interference)
     @app.callback(
