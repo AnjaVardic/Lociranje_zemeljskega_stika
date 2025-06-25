@@ -35,8 +35,8 @@ def run_interactive_map(folder_path):
     RTP_gdf = gpd.read_file(os.path.join(folder_path, "RTP.shp"))
 
     # Print all columns of lines_gdf
-    with pd.option_context('display.max_columns', None):
-        print(lines_gdf.head())
+    #with pd.option_context('display.max_columns', None):
+        #print(lines_gdf.head())
         #print(TR_gdf.head())
         #print(RTP_gdf.head())
         #print(points_gdf.head())
@@ -214,11 +214,6 @@ def run_interactive_map(folder_path):
             )
         except Exception as e:
             print(f"Skipping line {i} due to error: {e}")
-
-    #------------------------------------------------------------
-    #---DODAJ: doloci_dozemne_kapacitivnosti------------------
-    #------------------------------------------------------------
-
 
     #------------------------------------------------------------
     #----------------------- Create Loads -----------------------

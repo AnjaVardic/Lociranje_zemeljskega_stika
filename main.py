@@ -23,7 +23,7 @@ def main():
     #-------------------------------------------------------------
     load_data, get_timeseries_figure, net = interactive_power_viewer(csv_path, points_gdf, net, node_id_map)
 
-    #print(net.trafo.head())
+    #print(net.line.head())
     #print(net)
 
     #print("Prepared power load data:")
@@ -35,18 +35,18 @@ def main():
     #Inject buttons into layout and setup interactivity
     #Add UI buttons + callbacks, all args passed by name
     # v add_buttons se kliče funkcija pozeniSimulacijo, dodaj_PMU, dodaj_ozemljitev
-    # add_buttons_to_app(
-    #     app=app,
-    #     fig=fig,
-    #     points_gdf=points_gdf,
-    #     get_timeseries_figure=get_timeseries_figure,
-    #     func_add_grounding=dodaj_ozemljitev,
-    #     func_add_pmu=dodaj_pmu,
-    #     net=net,
-    #     func_run_simulation=zazeni_simulacijo
-    # )
+    add_buttons_to_app(
+        app=app,
+        fig=fig,
+        points_gdf=points_gdf,
+        get_timeseries_figure=get_timeseries_figure,
+        func_add_grounding=dodaj_ozemljitev,
+        func_add_pmu=dodaj_pmu,
+        net=net,
+        func_run_simulation=zazeni_simulacijo
+    )
 
-    # app.run(debug=True)
+    app.run(debug=True)
 
 if __name__ == "__main__":
     main()
