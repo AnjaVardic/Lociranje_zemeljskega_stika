@@ -1,5 +1,3 @@
-# pozeniSimulacijo.py
-
 import pandapower as pp
 import pandapower.shortcircuit as sc
 import pandas as pd

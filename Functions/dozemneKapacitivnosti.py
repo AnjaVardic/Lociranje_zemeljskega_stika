@@ -66,6 +66,9 @@ def doloci_dozemne_kapacitivnosti(lines_gdf, export_excel=True):
         lambda x: pd.Series(extract_material_properties(x))
     )
 
+    # if export_excel:
+    #     lines_gdf.to_excel("lines_gdf_capacitances.xlsx", index=False)
+
     # Calculate BC (nF/km)
     lines_gdf["BC"] = lines_gdf.apply(calculate_geometry_based_capacitance, axis=1)
 
